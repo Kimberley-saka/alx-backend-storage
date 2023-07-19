@@ -5,6 +5,7 @@ Redis
 import redis
 import uuid
 from typing import Union, Callable
+import functools
 
 
 class Cache:
@@ -52,3 +53,24 @@ class Cache:
         conversion function
         """
         return self.get(key, fn=lambda d: int(d))
+
+
+def count_calls(method: Callable) -> Callable:
+    """
+    Returns a callable
+    """
+    key = method.__qualname__
+
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        """
+        increments the count for that key every time the method is called
+        and returns the value returned by the original method
+        """
+        self._redis.incr(key)
+        return method(self, *args, **kwargs)
+
+    return wrapper
+
+
+Cache.store = count_calls(Cache.store)
